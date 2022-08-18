@@ -59,7 +59,7 @@ def index():
   # for show in upcoming_shows_query:
   #   upcoming_shows.append(show)
 
-  # past_shows_query = db.session.query(Show).join(Venue).filter(Show.artist_id==artist_id).filter(Show.start_time) <= date).all()   
+  # past_shows_query = db.session.query(Show).join(Venue).filter(Show.artist_id==artist_id).filter(Show.start_time <= date).all()   
   # past_shows = []
   # for show in past_shows_query:
   #   past_shows.append(show)
