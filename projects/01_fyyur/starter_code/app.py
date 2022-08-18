@@ -3,106 +3,37 @@
 #----------------------------------------------------------------------------#
 
 import json
+import datetime
 from random import randint
+from sqlite3 import Date
 from tokenize import String
 from unicodedata import name
+from xmlrpc.client import DateTime
 import dateutil.parser
 import babel
 from flask import Flask, abort, render_template, request, Response, flash, redirect, url_for
-from flask_moment import Moment
-from flask_migrate import Migrate
-from flask_sqlalchemy import SQLAlchemy
+
+
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
 import os
-#----------------------------------------------------------------------------#
-# App Config.
-#----------------------------------------------------------------------------#
 
-app = Flask(__name__)
-moment = Moment(app)
-app.config.from_object('config')
-db = SQLAlchemy(app)
-
-migrate=Migrate(app, db)
-
-
-# TODO: connect to a local postgresql database
-
-#----------------------------------------------------------------------------#
-# Models.
-#----------------------------------------------------------------------------#
-
-#https://github.com/crazyguitar/pysheeet/blob/master/docs/notes/python-sqlalchemy.rst#set-a-database-url
-
-class Show(db.Model):
-  __tablename__ = 'shows'
-
-  id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-  venue_id= db.Column(db.ForeignKey('venues.id'))
-  artist_id=db.Column(db.ForeignKey('artists.id'))
-  start_time=db.Column(db.String)
-  
-  #NOTE: I have made many attempts at trying to get many to many and association tables to work when you need to ID to specify shows, but it will not work.
-  #      I can create them WITHOUT a proper identifier, but it refuses to work as soon as a primary key is added
-  # venue_id= db.Column(db.ForeignKey('venues.id'), primary_key=True)
-  # artist_id=db.Column(db.ForeignKey('artists.id'), primary_key=True)
-  # artist = db.relationship("Artist", back_populates="venues")
-  # venue = db.relationship("Venue", back_populates="artists")
-
-  #https://www.gormanalysis.com/blog/many-to-many-relationships-in-fastapi/
-
-class Venue(db.Model):
-  __tablename__ = 'venues'
-
-  id = db.Column(db.Integer, primary_key=True)
-  name = db.Column(db.String)
-  city = db.Column(db.String(120))
-  state = db.Column(db.String(120))
-  address = db.Column(db.String(120))
-  phone = db.Column(db.String(120))
-  genres = db.Column(db.String(120))
-  image_link = db.Column(db.String(500))
-  facebook_link = db.Column(db.String(120))
-  website_link = db.Column(db.String(120))
-  seeking_talent = db.Column(db.Boolean, default=False)
-  seeking_description = db.Column(db.String(120))
-
-  # artists = db.relationship("Show", back_populates='venue')
-
-
-class Artist(db.Model):
-  __tablename__ = 'artists'
-  __table_args__ = {'extend_existing': True} 
-
-  id = db.Column(db.Integer, primary_key=True)
-  name = db.Column(db.String)
-  city = db.Column(db.String(120))
-  state = db.Column(db.String(120))
-  phone = db.Column(db.String(120))
-  genres = db.Column(db.String(120))
-  image_link = db.Column(db.String(500))
-  facebook_link = db.Column(db.String(120))
-  website_link = db.Column(db.String(120))
-  seeking_venue = db.Column(db.Boolean, default=False, nullable=False)
-  seeking_description = db.Column(db.String(120))
-  
-  # venues =  db.relationship("Show", back_populates = 'artist')
-
+from models import app, Show, Venue, Artist, db
+import sqlalchemy.types as types;
 
 #----------------------------------------------------------------------------#
 # Filters.
 #----------------------------------------------------------------------------#
 
 def format_datetime(value, format='medium'):
-  date = dateutil.parser.parse(value)
-  if format == 'full':
-      format="EEEE MMMM, d, y 'at' h:mma"
-  elif format == 'medium':
-      format="EE MM, dd, y h:mma"
-  return babel.dates.format_datetime(date, format, locale='en')
+    date = dateutil.parser.parse(value)
+    if format == 'full':
+        format="EEEE MMMM, d, y 'at' h:mma"
+    elif format == 'medium':
+        format="EE MM, dd, y h:mma"
+    return babel.dates.format_datetime(date, format, locale='en')
 
 app.jinja_env.filters['datetime'] = format_datetime
 
@@ -114,13 +45,31 @@ app.jinja_env.filters['datetime'] = format_datetime
 def index():
   return render_template('pages/home.html')
 
+  #NOTE: This was the most FRUSTRATING error I have ever encountered
+  #      Show.start_time > datetime.now() when used in filter for a join gives the error: "No operator matches the given name and argument types. You might need to add explicit type casts."
+  #      casting it to ANYTHING would lead to this error: "Parser must be a string or character stream, not InstrumentedAttribute" it seems that Show.start_time is an InstrumentedAttribute. 
+  #      I have searched far and wide for any information on why this is the case, but to no avail on finding an actual solution. 
+  #      I have spoken with session leads for some help and there seems to be no final solution.
+  #      Therefore any attempts to use a JOIN query involving filtering with Show.start_time are impossible. 
+  #      I still used join queries, however it was limited.
+
+  #JOIN queries:
+  # upcoming_shows_query = db.session.query(Show).join(Venue).filter(Show.artist_id==artist_id).filter(Show.start_time > datetime.now()).all();
+  # upcoming_shows = []
+  # for show in upcoming_shows_query:
+  #   upcoming_shows.append(show)
+
+  # past_shows_query = db.session.query(Show).join(Venue).filter(Show.artist_id==artist_id).filter(Show.start_time) <= date).all()   
+  # past_shows = []
+  # for show in past_shows_query:
+  #   past_shows.append(show)
 
 #  Venues
 #  ----------------------------------------------------------------
 
 @app.route('/venues')
 def venues():
-  venues = Venue.query.first();
+  venues = Venue.query.all();
   
   cities = []
   city_venues = {}
@@ -187,71 +136,54 @@ def search_venues():
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
 
-  venues = Venue.query.all();
   venue_data = []
+  upcoming_shows = []
+  past_shows = []
+  genres = []
 
-  # Loops thorugh venues to find corresponding shows
-  for venue in venues:
-    shows = Show.query.filter_by(venue_id = venue.id )
+  venue = Venue.query.filter_by(id = venue_id).first()
 
-    pastArtist=[]
-    upcomingArtist = []
+  venue_shows_query = db.session.query(Show.artist_id, Show.start_time, Show.venue_id, Artist.name, Artist.image_link).join(Artist).join(Venue).filter(Show.venue_id == venue.id).all();
 
-    # Loops through the corresponding shows to determine the corresponding artists for the shows
-    for show in shows:
-
-      time = dateutil.parser.parse(show.start_time)
-      artists = Artist.query.filter_by(id = show.artist_id).all()
-
-      past_artist = []
-      upcoming_artist = []
-      
-      # Determines whether the artist is has an upcoming or past show
-      for artist in artists:
-        if time <= datetime.now():
-          past_artist.append(artist);
-        else:
-          upcoming_artist.append(artist);
-      
-
-      for artist in past_artist:
-        pastArtist.append({
-          "artist_id": artist.id,
-          "artist_name": artist.name,
-          "artist_image_link": artist.image_link,
+  for show in venue_shows_query:
+    if dateutil.parser.parse(show.start_time) > datetime.now():
+      upcoming_shows.append({
+          "artist_id": show.artist_id,
+          "artist_name": show.name,
+          "artist_image_link": show.image_link,
           "start_time": show.start_time
-        })
-
-      for artist in upcoming_artist:
-        upcomingArtist.append({
-          "artist_id": artist.id,
-          "artist_name": artist.name,
-          "artist_image_link": artist.image_link,
+      })
+    else:
+      past_shows.append({
+          "artist_id": show.artist_id,
+          "artist_name": show.name,
+          "artist_image_link": show.image_link,
           "start_time": show.start_time
-        })
+      })
 
+  if venue.genres != None:
     #https://www.w3schools.com/python/ref_string_maketrans.asp
     trans = (venue.genres).maketrans({ "{" : "", "}" : ""})
     genres = (venue.genres).translate(trans)
 
-    venue_data.append({
-      "id": venue.id,
-      "name": venue.name,
-      "genres": genres.split(","),
-      "address": venue.address,
-      "city": venue.city,
-      "state": venue.state,
-      "phone": venue.phone,
-      "website": venue.website_link,
-      "facebook_link": venue.facebook_link,
-      "seeking_talent": venue.seeking_talent,
-      "seeking_description": venue.seeking_description,
-      "image_link": venue.image_link,
-      "past_shows": pastArtist,
-      "upcoming_shows": upcomingArtist,
-      "past_shows_count": len(pastArtist),
-      "upcoming_shows_count": len(upcomingArtist)
-    })
+  venue_data.append({
+    "id": venue.id,
+    "name": venue.name,
+    "genres": genres.split(","),
+    "address": venue.address,
+    "city": venue.city,
+    "state": venue.state,
+    "phone": venue.phone,
+    "website": venue.website_link,
+    "facebook_link": venue.facebook_link,
+    "seeking_talent": venue.seeking_talent,
+    "seeking_description": venue.seeking_description,
+    "image_link": venue.image_link,
+    "past_shows": past_shows,
+    "upcoming_shows": upcoming_shows,
+    "past_shows_count": len(past_shows),
+    "upcoming_shows_count": len(upcoming_shows)
+  })
 
 
   data = list(filter(lambda d: d['id'] == venue_id, venue_data))[0]
@@ -336,7 +268,7 @@ def artists():
 @app.route('/artists/search', methods=['POST'])
 def search_artists():
   search_term = request.form.get('search_term') 
-  
+
   artists = Artist.query.filter(Artist.name.ilike(f'%{search_term}%')).all();
   data = []
   num_upcoming_shows = 0;
@@ -368,68 +300,54 @@ def search_artists():
 
 @app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
-  artists = Artist.query.all();
+
   artist_data = []
+  upcoming_shows = []
+  past_shows = []
+  genres = []
 
-  # Loops thorugh artists to find corresponding shows
-  for artist in artists:
-    shows = Show.query.filter_by(artist_id = artist.id )
+  artist = Artist.query.filter_by(id = artist_id).first();
 
-    pastVenue=[]
-    upcomingVenue = []
+  artist_shows_query = db.session.query(Show.artist_id, Show.start_time, Show.venue_id, Venue.city, Venue.name, Venue.image_link).join(Venue).join(Artist).filter(Show.artist_id == artist.id).all();
 
-    # Loops through the corresponding shows to determine the corresponding venues for the shows
-    for show in shows:
-      time = dateutil.parser.parse(show.start_time)
-      venues = Venue.query.filter_by(id = show.venue_id).all()
-
-      past_venue = []
-      upcoming_venue = []
-
-      # Determines whether the venue is has an upcoming or past show
-      for venue in venues:
-        if time <= datetime.now():
-          past_venue.append(venue);
-        else:
-          upcoming_venue.append(venue);
-      
-
-      for venue in past_venue:
-        pastVenue.append({
-          "venue_id": venue.id,
-          "venue_name": venue.name,
-          "venue_image_link": venue.image_link,
+  for show in artist_shows_query:
+    if dateutil.parser.parse(show.start_time) > datetime.now():
+      upcoming_shows.append({
+          "venue_id": show.venue_id,
+          "venue_name": show.name,
+          "venue_image_link": show.image_link,
           "start_time": show.start_time
-        })
-
-      for venue in upcoming_venue:
-        upcomingVenue.append({
-          "venue_id": venue.id,
-          "venue_name": venue.name,
-          "venue_image_link": venue.image_link,
+      })
+    else:
+      past_shows.append({
+          "venue_id": show.venue_id,
+          "venue_name": show.name,
+          "venue_image_link": show.image_link,
           "start_time": show.start_time
-        })
+      })
 
-    #https://www.w3schools.com/python/ref_string_maketrans.asp
+
+  if artist.genres != None:
+  #https://www.w3schools.com/python/ref_string_maketrans.asp
     trans = (artist.genres).maketrans({ "{" : "", "}" : ""})
     genres = (artist.genres).translate(trans)
 
-    artist_data.append({
-      "id": artist.id,
-      "name": artist.name,
-      "genres": genres.split(","),
-      "city": artist.city,
-      "state": artist.state,
-      "phone": artist.phone,
-      "website": artist.website_link,
-      "facebook_link": artist.facebook_link,
-      "seeking_venue": artist.seeking_venue,
-      "seeking_description": artist.seeking_description,
-      "image_link": artist.image_link,
-      "past_shows": pastVenue,
-      "upcoming_shows": upcomingVenue,
-      "past_shows_count": len(pastVenue),
-      "upcoming_shows_count": len(upcomingVenue)
+  artist_data.append({
+    "id": artist.id,
+    "name": artist.name,
+    "genres": genres.split(","),
+    "city": artist.city,
+    "state": artist.state,
+    "phone": artist.phone,
+    "website": artist.website_link,
+    "facebook_link": artist.facebook_link,
+    "seeking_venue": artist.seeking_venue,
+    "seeking_description": artist.seeking_description,
+    "image_link": artist.image_link,
+    "past_shows": past_shows,
+    "upcoming_shows": upcoming_shows,
+    "past_shows_count": len(past_shows),
+    "upcoming_shows_count": len(upcoming_shows)
     })
 
   data = list(filter(lambda d: d['id'] == artist_id, artist_data))[0]
@@ -558,25 +476,19 @@ def create_artist_submission():
 
 @app.route('/shows')
 def shows():
-  shows = Show.query.all();
-  venues = Venue.query.all();
-  artists = Artist.query.all();
-
   data=[]
 
-  for show in shows:
-    for venue in venues:
-      if show.venue_id == venue.id:
-        for artist in artists:
-          if show.artist_id == artist.id:
-            data.append({
-              "venue_id": venue.id,
-              "venue_name": venue.name,
-              "artist_id": artist.id,
-              "artist_name": artist.name,
-              "artist_image_link": artist.image_link,
-              "start_time": show.start_time
-              })  
+  shows_query = db.session.query(Show.artist_id, Show.start_time, Show.venue_id, Venue.name, Artist.image_link, Artist.name).join(Artist).join(Venue).all();
+
+  for show in shows_query:
+    data.append({
+        "venue_id": show.venue_id,
+        "venue_name": show[3],
+        "artist_id": show.artist_id,
+        "artist_name": show[5],
+        "artist_image_link": show.image_link,
+        "start_time": show.start_time
+    })
     
   return render_template('pages/shows.html', shows=data)
 
@@ -590,13 +502,12 @@ def create_shows():
 def create_show_submission():
   try:
 
-    artist_id = request.form.get('artist_id');
-    venue_id = request.form.get('venue_id');
-    start_time = request.form.get('start_time');
+    artistId = request.form.get('artist_id');
+    venueId = request.form.get('venue_id');
+    startTime = str(request.form.get('start_time'));
 
-    shows = Show(artist_id=artist_id, venue_id=venue_id, start_time=start_time)
-    db.session.add(shows);
-
+    show = Show(artist_id = artistId,venue_id = venueId,start_time= startTime)
+    db.session.add(show)
     db.session.commit();
     flash('Show was successfully listed!');
   except:
