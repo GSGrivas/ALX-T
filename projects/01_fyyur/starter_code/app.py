@@ -164,12 +164,12 @@ def show_venue(venue_id):
   if venue.genres != None:
     #https://www.w3schools.com/python/ref_string_maketrans.asp
     trans = (venue.genres).maketrans({ "{" : "", "}" : ""})
-    genres = (venue.genres).translate(trans)
+    genres = (venue.genres).translate(trans).split(",")
 
   venue_data.append({
     "id": venue.id,
     "name": venue.name,
-    "genres": genres.split(","),
+    "genres": genres,
     "address": venue.address,
     "city": venue.city,
     "state": venue.state,
@@ -330,12 +330,12 @@ def show_artist(artist_id):
   if artist.genres != None:
   #https://www.w3schools.com/python/ref_string_maketrans.asp
     trans = (artist.genres).maketrans({ "{" : "", "}" : ""})
-    genres = (artist.genres).translate(trans)
+    genres = (artist.genres).translate(trans).split(",")
 
   artist_data.append({
     "id": artist.id,
     "name": artist.name,
-    "genres": genres.split(","),
+    "genres": genres,
     "city": artist.city,
     "state": artist.state,
     "phone": artist.phone,
