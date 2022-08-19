@@ -69,35 +69,37 @@ def index():
 
 @app.route('/venues')
 def venues():
-  venues = Venue.query.all();
-  
-  cities = []
-  city_venues = {}
-  
-  #Loops through the venues and adds them to the 'cities' list if the city is NOT already in the list
-  for venue in venues:
-    if len(cities) == 0:
-      cities.append({"city": venue.city, "state": venue.state, "venues": []})
-    elif not any(city["city"] == venue.city for city in cities):
-      cities.append({"city": venue.city, "state": venue.state, "venues": []})
-
-  #Loops through cities and venues and adds the corresponding ones to 'city_venues' as well as counts the shows according to the venues
-  for city in cities:
+  try:
+    venues = Venue.query.all();
+    
+    cities = []
+    city_venues = {}
+    
+    #Loops through the venues and adds them to the 'cities' list if the city is NOT already in the list
     for venue in venues:
-      num_upcoming_shows = 0;
-      if venue.city == city["city"]:
-        
-        shows = Show.query.filter_by(venue_id = venue.id )
-        for show in shows:
+      if len(cities) == 0:
+        cities.append({"city": venue.city, "state": venue.state, "venues": []})
+      elif not any(city["city"] == venue.city for city in cities):
+        cities.append({"city": venue.city, "state": venue.state, "venues": []})
 
-          #https://dateutil.readthedocs.io/en/stable/parser.html
-          time = dateutil.parser.parse(show.start_time) 
-          if time > datetime.now():
-            num_upcoming_shows += 1
+    #Loops through cities and venues and adds the corresponding ones to 'city_venues' as well as counts the shows according to the venues
+    for city in cities:
+      for venue in venues:
+        num_upcoming_shows = 0;
+        if venue.city == city["city"]:
+          
+          shows = Show.query.filter_by(venue_id = venue.id).all()
+          for show in shows:
 
-        city_venues = {"id": venue.id, "name": venue.name, "num_upcoming_shows": num_upcoming_shows};
-        city["venues"].append(city_venues);
-            
+            #https://dateutil.readthedocs.io/en/stable/parser.html
+            time = dateutil.parser.parse(show.start_time) 
+            if time > datetime.now():
+              num_upcoming_shows += 1
+
+          city_venues = {"id": venue.id, "name": venue.name, "num_upcoming_shows": num_upcoming_shows};
+          city["venues"].append(city_venues);
+  except:
+      flash('Could not display venues')
   return render_template('pages/venues.html', areas=cities);
 
 @app.route('/venues/search', methods=['POST'])
