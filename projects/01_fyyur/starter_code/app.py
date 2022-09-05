@@ -2,6 +2,7 @@
 # Imports
 #----------------------------------------------------------------------------#
 
+from distutils.log import debug
 import json
 import datetime
 from random import randint
@@ -508,7 +509,10 @@ def create_show_submission():
     venueId = request.form.get('venue_id');
     startTime = str(request.form.get('start_time'));
 
-    show = Show(artist_id = artistId,venue_id = venueId,start_time= startTime)
+    venue = Venue.query.filter(id == venueId).first();
+    artist = Artist.query.filter(id == artistId).first();
+
+    show = Show(artist_id = artistId, venue_id = venueId, start_time= startTime)
     db.session.add(show)
     db.session.commit();
     flash('Show was successfully listed!');
