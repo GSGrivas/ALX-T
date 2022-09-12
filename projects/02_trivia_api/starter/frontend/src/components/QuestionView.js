@@ -121,12 +121,13 @@ class QuestionView extends Component {
         <div className="categories-list">
           <h2 onClick={() => {this.getQuestions()}}>Categories</h2>
           <ul>
-            {Object.keys(this.state.categories).map((id, ) => (
+            {/* This was breaking the code */}
+            {/* {Object.keys(this.state.categories).map((id, ) => (
               <li key={id} onClick={() => {this.getByCategory(id)}}>
                 {this.state.categories[id]}
-                <img className="category" src={`${this.state.categories[id].toLowerCase()}.svg`}/>
+                <img className="category" src={`${this.state.categories[id].toString().toLowerCase()}.svg`}/>
               </li>
-            ))}
+            ))} */}
           </ul>
           <Search submitSearch={this.submitSearch}/>
         </div>

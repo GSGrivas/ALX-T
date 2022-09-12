@@ -98,22 +98,19 @@ class TriviaTestCase(unittest.TestCase):
 
     # NOTE: Search questions tests
     def test_get_question_search_with_results(self):
-        res = self.client().post("/questions", json={"search": "is"})
+        res = self.client().post("/questions/searches", json={"search": "soccer"})
         data = json.loads(res.data)
 
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data["success"], True)
-        self.assertTrue(data["total_questions"])
-        self.assertEqual(len(data["questions"]), 1)
+        self.assertTrue(data["total_questions"], 1)
 
     def test_get_question_search_without_results(self):
-        res = self.client().post("/questions", json={"search": "johhnys"})
+        res = self.client().post("/questions/searches", json={"search": "johhnys"})
         data = json.loads(res.data)
 
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual(data["success"], True)
-        self.assertTrue(data["total_questions"], 0)
-        self.assertEqual(len(data["questions"]), 0)
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(data["success"], False)
 
     #NOTE: Get questions by categories
     def test_get_questions_by_categories(self):

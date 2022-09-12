@@ -69,22 +69,22 @@ def create_app(test_config=None):
   '''
   @app.route("/questions")
   def retrieve_questions():
-    try:
-      questions = Question.query.order_by(Question.id).all();
-      current_questions = paginate_questions(request, questions);
+    categories = Category.query.order_by(Category.id).all();
+    formatted_categories = [category.format() for category in categories]
+    questions = Question.query.order_by(Question.id).all();
+    current_questions = paginate_questions(request, questions);
     
-      if len(current_questions) < 1 :
-        abort(404)
+    if len(current_questions) == 0 :
+      abort(404)
 
-      return jsonify(
-        {
-            "success": True,
-            "questions": current_questions,
-            "total_questions": len(Question.query.all()),
-        }
-      )
-    except:
-      abort(400)
+    return jsonify(
+      {
+          "success": True,
+          "questions": current_questions,
+          "categories": formatted_categories,
+          "total_questions": len(Question.query.all()),
+      }
+    )
   '''
   @TODO: 
   Create an endpoint to DELETE question using a question ID. 
@@ -137,12 +137,13 @@ def create_app(test_config=None):
       questions = Question.query.order_by(Question.id).all()
       current_questions = paginate_questions(request, questions)
 
+
       return jsonify(
           {
               "success": True,
               "created": question.id,
               "questions": current_questions,
-              "total_questions": len(Question.query.all()),
+              "total_questions": len(Question.query.all())
           }
       )
     except:
@@ -158,15 +159,18 @@ def create_app(test_config=None):
   only question that include that string within their question. 
   Try using the word "title" to start. 
   '''
-  @app.route("/questions", methods=["POST"])
+  @app.route("/questions/searches", methods=["POST"])
   def search_book():
     body = request.get_json()
 
     search = body.get("search", None)
-
+    
     questions = Question.query.order_by(Question.id).filter(Question.question.ilike("%{}%".format(search)))
     formatted_questions = [question.format() for question in questions]
-    
+
+    if len(formatted_questions) == 0:
+      abort(404)
+
     return jsonify(
     {
       "success": True,
@@ -188,6 +192,7 @@ def create_app(test_config=None):
 
     current_category = Category.query.filter(Category.id == category_id).one_or_none()
     
+    print(formatted_questions)
 
     if len(formatted_questions) == 0:
       abort(404)
@@ -208,6 +213,7 @@ def create_app(test_config=None):
   This endpoint should take category and previous question parameters 
   and return a random questions within the given category, 
   if provided, and that is not one of the previous questions. 
+
 
   TEST: In the "Play" tab, after a user selects "All" or a category,
   one question at a time is displayed, the user is allowed to answer
@@ -244,12 +250,16 @@ def create_app(test_config=None):
           405,
       )
   return app
-#   cd backend 
-#   source venv/scripts/activate
-#   export FLASK_APP=flaskr
-#   export FLASK_DEBUG=true
-#   flask run
+"""  
+cd backend 
+source venv/scripts/activate
+export FLASK_APP=flaskr
+export FLASK_DEBUG=true
+flask run
 
-#  
+curl http://localhost:5000/questions
+"""
+
+  
 
     
