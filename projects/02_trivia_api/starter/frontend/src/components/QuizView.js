@@ -52,7 +52,7 @@ class QuizView extends Component {
       contentType: 'application/json',
       data: JSON.stringify({
         previous_questions: previousQuestions,
-        quiz_category: this.state.quizCategory
+        quiz_category: this.state.quizCategory.type.type
       }),
       xhrFields: {
         withCredentials: true
@@ -62,9 +62,9 @@ class QuizView extends Component {
         this.setState({
           showAnswer: false,
           previousQuestions: previousQuestions,
-          currentQuestion: result.question,
+          currentQuestion: result.currentQuestion,
           guess: '',
-          forceEnd: result.question ? false : true
+          forceEnd: result.currentQuestion ? false : true
         })
       },
       error: (error) => {
@@ -108,7 +108,7 @@ class QuizView extends Component {
                       value={id}
                       className="play-category"
                       onClick={() => this.selectCategory({type:this.state.categories[id], id})}>
-                      {this.state.categories[id]}
+                      {this.state.categories[id].type}
                     </div>
                   )
                 })}

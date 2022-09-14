@@ -1,4 +1,5 @@
 import os
+from unicodedata import category
 from flask import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -191,8 +192,6 @@ def create_app(test_config=None):
     formatted_questions = [question.format() for question in questions]
 
     current_category = Category.query.filter(Category.id == category_id).one_or_none()
-    
-    print(formatted_questions)
 
     if len(formatted_questions) == 0:
       abort(404)
@@ -214,12 +213,55 @@ def create_app(test_config=None):
   and return a random questions within the given category, 
   if provided, and that is not one of the previous questions. 
 
+  POST '/quizzes'
+- Sends a post request in order to get the next question 
+- Request Body: 
+{'previous_questions':  an array of question id's such as [1, 4, 20, 15]
+'quiz_category': a string of the current category }
+- Returns: a single new question object 
+{
+    'question': {
+        'id': 1,
+        'question': 'This is a question',
+        'answer': 'This is an answer', 
+        'difficulty': 5,
+        'category': 4
+    }
+}
 
   TEST: In the "Play" tab, after a user selects "All" or a category,
   one question at a time is displayed, the user is allowed to answer
   and shown whether they were correct or not. 
   '''
+  @app.route("/quizzes", methods=["POST"])
+  def quizzes():
+    body = request.get_json()
 
+    previous_questions = body.get("previous_questions", None)
+    quiz_category = body.get("quiz_category", None)
+    category = Category.query.filter(Category.type == quiz_category).first()
+    questions = Question.query.filter(Question.category == category.id).all()
+
+    if (len(questions) == len(previous_questions)):
+      abort(404)
+    elif (len(questions) < 1):
+      abort(404)
+
+    for prevQuestion in previous_questions:
+      for question in questions:
+        if question.id == prevQuestion:
+          questions.remove(question);
+
+    question = random.choice(questions)
+    currentQuestion = question.format()
+
+  
+
+    return jsonify(
+    {
+      "success": True,
+      "currentQuestion": currentQuestion
+    })
   '''
   @TODO: 
   Create error handlers for all expected errors 

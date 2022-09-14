@@ -19,8 +19,9 @@ class Question extends Component {
       <div className="Question-holder">
         <div className="Question">{question}</div>
         <div className="Question-status">
-          {console.log(category.type.toString())}
-          <img className="category" src={`${category.type.toString().toLowerCase()}.svg`}/>
+            {/* This breaks the code, I am unable to get it to work, so I just commented it out */}
+            {/* <img className="category" src={`${category.type.toString().toLowerCase()}.svg`}/> */}
+          
           <div className="difficulty">Difficulty: {difficulty}</div>
           <img src="delete.png" className="delete" onClick={() => this.props.questionAction('DELETE')}/>
           

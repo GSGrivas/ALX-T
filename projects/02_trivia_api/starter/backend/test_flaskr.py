@@ -26,6 +26,30 @@ class TriviaTestCase(unittest.TestCase):
         "question": "Which is the only team to play in every soccer World Cup tournament?"
         }
 
+        self.previous_questions = [
+            {
+            "answer": "The Liver",
+            "category": 1,
+            "difficulty": 4,
+            "id": 20,
+            "question": "What is the heaviest organ in the human body?"
+            },
+            {
+            "answer": "Alexander Fleming",
+            "category": 1,
+            "difficulty": 3,
+            "id": 21,
+            "question": "Who discovered penicillin?"
+            },
+            {
+            "answer": "Blood",
+            "category": 1,
+            "difficulty": 4,
+            "id": 22,
+            "question": "Hematology is a branch of medicine involving the study of what?"
+            }
+        ]
+
         # binds the app to the current context
         with self.app.app_context():
             self.db = SQLAlchemy()
@@ -122,6 +146,32 @@ class TriviaTestCase(unittest.TestCase):
         self.assertTrue(data["questions"])
         self.assertEqual(data["total_questions"], 3)
         self.assertTrue(data["current_category"],"Science")
+
+    
+    # NOTE: Get quizzes
+    def test_get_quizzes(self):
+        res = self.client().post("/quizzes", json={"previous_questions": [], "quiz_category": "Science"})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data["success"], True)
+        self.assertTrue(data["currentQuestion"])
+
+    def test_get_quizzes_with_previous_questions(self):
+        res = self.client().post("/quizzes", json={"previous_questions": self.new_question, "quiz_category": "Science"})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data["success"], True)
+        self.assertTrue(data["currentQuestion"])
+
+    def test_404_get_quizzes_with_all_previous_questions(self):
+        res = self.client().post("/quizzes", json={"previous_questions": self.previous_questions, "quiz_category": "Science"})
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(data["success"], False)
+
 
 # Make the tests conveniently executable
 if __name__ == "__main__":
