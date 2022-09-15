@@ -161,10 +161,10 @@ def create_app(test_config=None):
   Try using the word "title" to start. 
   '''
   @app.route("/questions/searches", methods=["POST"])
-  def search_book():
+  def search_question():
     body = request.get_json()
 
-    search = body.get("search", None)
+    search = body.get("searchTerm", None)
     
     questions = Question.query.order_by(Question.id).filter(Question.question.ilike("%{}%".format(search)))
     formatted_questions = [question.format() for question in questions]
@@ -192,6 +192,7 @@ def create_app(test_config=None):
     formatted_questions = [question.format() for question in questions]
 
     current_category = Category.query.filter(Category.id == category_id).one_or_none()
+    print(current_category)
 
     if len(formatted_questions) == 0:
       abort(404)
@@ -203,7 +204,7 @@ def create_app(test_config=None):
       "success": True,
       "questions": formatted_questions,
       "total_questions": len(formatted_questions),
-      "current_category": current_category.type
+      "current_category": current_category
     })
 
   '''
@@ -239,6 +240,8 @@ def create_app(test_config=None):
 
     previous_questions = body.get("previous_questions", None)
     quiz_category = body.get("quiz_category", None)
+    # quiz_category is for some reason being passed as {'type': {'id': 1, 'type': 'Science'}, 'id': '0'} in the getNextQuestion()
+    # I had to pass it as quizCategory.type.type and then it works like this
     category = Category.query.filter(Category.type == quiz_category).first()
     questions = Question.query.filter(Question.category == category.id).all()
 

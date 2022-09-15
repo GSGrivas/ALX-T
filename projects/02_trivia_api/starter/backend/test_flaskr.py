@@ -95,14 +95,14 @@ class TriviaTestCase(unittest.TestCase):
 
     # NOTE: Delete questions tests
     # def test_delete_question(self):
-    #     res = self.client().delete('/questions/2')
+    #     res = self.client().delete('/questions/5')
     #     data = json.loads(res.data)
 
-    #     question = Question.query.filter(Question.id == 2).one_or_none()
+    #     question = Question.query.filter(Question.id == 5).one_or_none()
 
     #     self.assertEqual(res.status_code, 200)
     #     self.assertEqual(data['success'], True)
-    #     self.assertEqual(data['deleted'], 2)
+    #     self.assertEqual(data['deleted'], 5)
     #     self.assertTrue(data['total_questions'])
     #     self.assertTrue(len(data['questions']))
     #     self.assertEqual(question, None)
@@ -118,7 +118,9 @@ class TriviaTestCase(unittest.TestCase):
     def test_create_new_question(self):
         res = self.client().post("/questions", json=self.new_question)
         data = json.loads(res.data)
-        pass
+        
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
 
     # NOTE: Search questions tests
     def test_get_question_search_with_results(self):
@@ -146,6 +148,13 @@ class TriviaTestCase(unittest.TestCase):
         self.assertTrue(data["questions"])
         self.assertEqual(data["total_questions"], 3)
         self.assertTrue(data["current_category"],"Science")
+
+    def test_404_get_questions_by_categories(self):
+        res = self.client().get("/categories/7/questions")
+        data = json.loads(res.data)
+
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(data["success"], False)
 
     
     # NOTE: Get quizzes
