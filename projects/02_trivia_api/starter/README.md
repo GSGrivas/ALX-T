@@ -7,7 +7,8 @@ questions. This project was created for us to learn how to do testing-driven dev
 
 #Getting Started
 
-#Prerequisites
+##Prerequisites
+You will require VSCode, an installation of Postgres and an internet connection.
 
 ##Backend
 
@@ -200,7 +201,7 @@ POST '/questions'
 ```
 
 ```js
-POST '/questions'
+POST '/questions/searches'
 - Sends a post request in order to search for a specific question by search term 
 - Request Body: 
 {
