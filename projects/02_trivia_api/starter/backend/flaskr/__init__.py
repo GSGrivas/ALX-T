@@ -1,3 +1,13 @@
+"""  
+cd backend 
+source venv/scripts/activate
+export FLASK_APP=flaskr
+export FLASK_DEBUG=true
+flask run
+
+curl http://localhost:5000/questions
+"""
+
 import os
 from unicodedata import category
 from flask import Flask, request, abort, jsonify
@@ -33,19 +43,12 @@ def create_app(test_config=None):
     response.headers.add("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS")
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
-  '''
-  @TODO: 
-  Create an endpoint to handle GET requests 
-  for all available categories.
-  '''
+
   @app.route("/categories")
   def get_categories():
     
     categories = Category.query.order_by(Category.id).all()
     formatted_categories = [category.format() for category in categories]
-
-    if len(formatted_categories) == 0:
-      abort(404)
     
     return jsonify(
       {
@@ -55,19 +58,6 @@ def create_app(test_config=None):
       }
     )
 
-  '''
-  @TODO: 
-  Create an endpoint to handle GET requests for questions, 
-  including pagination (every 10 questions). 
-  This endpoint should return a list of questions, 
-  number of total questions, current category, categories. 
-
-
-  TEST: At this point, when you start the application
-  you should see questions and categories generated,
-  ten questions per page and pagination at the bottom of the screen for three pages.
-  Clicking on the page numbers should update the questions. 
-  '''
   @app.route("/questions")
   def retrieve_questions():
     categories = Category.query.order_by(Category.id).all();
@@ -86,13 +76,7 @@ def create_app(test_config=None):
           "total_questions": len(Question.query.all()),
       }
     )
-  '''
-  @TODO: 
-  Create an endpoint to DELETE question using a question ID. 
 
-  TEST: When you click the trash icon next to a question, the question will be removed.
-  This removal will persist in the database and when you refresh the page. 
-  '''
   @app.route("/questions/<int:question_id>", methods=["DELETE"])
   def delete_question(question_id):
     question = Question.query.filter(Question.id == question_id).one_or_none()
@@ -112,27 +96,22 @@ def create_app(test_config=None):
             "total_questions": len(Question.query.all()),
         }
     )
-  '''
-  @TODO: 
-  Create an endpoint to POST a new question, 
-  which will require the question and answer text, 
-  category, and difficulty score.
 
-  TEST: When you submit a question on the "Add" tab, 
-  the form will clear and the question will appear at the end of the last page
-  of the questions list in the "List" tab.  
-  '''
   @app.route("/questions", methods=["POST"])
   def create_question():
-    body = request.get_json()
-
-    new_answer = body.get("answer", None)
-    new_category = body.get("category", None)
-    new_difficulty = body.get("difficulty", None)
-    new_question = body.get("question", None)
-
     try:
-      question = Question(answer=new_answer, category=new_category, difficulty=new_difficulty, question=new_question)
+      body = request.get_json()
+      new_answer = body.get("answer", None)
+      new_category = body.get("category", None)
+      new_difficulty = body.get("difficulty", None)
+      new_question = body.get("question", None)
+
+      question = Question(
+        answer=new_answer, 
+        category=new_category, 
+        difficulty=new_difficulty, 
+        question=new_question
+      )
       question.insert()
 
       questions = Question.query.order_by(Question.id).all()
@@ -149,24 +128,16 @@ def create_app(test_config=None):
       )
     except:
         abort(422)
-  '''
-  @TODO: 
-  Create a POST endpoint to get questions based on a search term. 
-  It should return any questions for whom the search term 
-  is a substring of the question. 
 
-  
-  TEST: Search by any phrase. The questions list will update to include 
-  only question that include that string within their question. 
-  Try using the word "title" to start. 
-  '''
   @app.route("/questions/searches", methods=["POST"])
   def search_question():
     body = request.get_json()
-
-    search = body.get("searchTerm", None)
-    
-    questions = Question.query.order_by(Question.id).filter(Question.question.ilike("%{}%".format(search)))
+    search = body.get("searchTerm")
+    questions = {
+      Question.query.order_by(Question.id)
+      .filter(Question.question
+      .ilike('%{}%'.format(search))).all()
+    }
     formatted_questions = [question.format() for question in questions]
 
     if len(formatted_questions) == 0:
@@ -178,76 +149,44 @@ def create_app(test_config=None):
       "questions": formatted_questions,
       "total_questions": len(formatted_questions),
     })
-  '''
-  @TODO: 
-  Create a GET endpoint to get questions based on category. 
 
-  TEST: In the "List" tab / main screen, clicking on one of the 
-  categories in the left column will cause only questions of that 
-  category to be shown. 
-  '''
   @app.route("/categories/<int:category_id>/questions", methods=["GET"])
   def get_category_questions(category_id):
-    questions = Question.query.filter(Question.category==category_id).all();
+    category_id = int(category_id) + 1
+    questions = Question.query.filter(Question.category==str(category_id)).all();
     formatted_questions = [question.format() for question in questions]
-
-    current_category = Category.query.filter(Category.id == category_id).one_or_none()
-    print(current_category)
+    current_category = Category.query.filter(Category.id == category_id).first()
 
     if len(formatted_questions) == 0:
       abort(404)
     elif current_category == None:
       abort(404)
 
+    formatted_category = current_category.format()
+
     return jsonify(
     {
       "success": True,
       "questions": formatted_questions,
       "total_questions": len(formatted_questions),
-      "current_category": current_category
+      "current_category": formatted_category
     })
 
-  '''
-  @TODO: 
-  Create a POST endpoint to get questions to play the quiz. 
-  This endpoint should take category and previous question parameters 
-  and return a random questions within the given category, 
-  if provided, and that is not one of the previous questions. 
-
-  POST '/quizzes'
-- Sends a post request in order to get the next question 
-- Request Body: 
-{'previous_questions':  an array of question id's such as [1, 4, 20, 15]
-'quiz_category': a string of the current category }
-- Returns: a single new question object 
-{
-    'question': {
-        'id': 1,
-        'question': 'This is a question',
-        'answer': 'This is an answer', 
-        'difficulty': 5,
-        'category': 4
-    }
-}
-
-  TEST: In the "Play" tab, after a user selects "All" or a category,
-  one question at a time is displayed, the user is allowed to answer
-  and shown whether they were correct or not. 
-  '''
   @app.route("/quizzes", methods=["POST"])
   def quizzes():
     body = request.get_json()
-
     previous_questions = body.get("previous_questions", None)
     quiz_category = body.get("quiz_category", None)
+    currentQuestion = None
     # quiz_category is for some reason being passed as {'type': {'id': 1, 'type': 'Science'}, 'id': '0'} in the getNextQuestion()
     # I had to pass it as quizCategory.type.type and then it works like this
     category = Category.query.filter(Category.type == quiz_category).first()
-    questions = Question.query.filter(Question.category == category.id).all()
+    if (category == None):
+      questions = Question.query.all()
+    else:
+      questions = Question.query.filter(Question.category == category.id).all()
 
-    if (len(questions) == len(previous_questions)):
-      abort(404)
-    elif (len(questions) < 1):
+    if (len(questions) < 1):
       abort(404)
 
     for prevQuestion in previous_questions:
@@ -255,10 +194,10 @@ def create_app(test_config=None):
         if question.id == prevQuestion:
           questions.remove(question);
 
-    question = random.choice(questions)
-    currentQuestion = question.format()
 
-  
+    if (len(questions) > len(previous_questions)):
+      question = random.choice(questions)
+      currentQuestion = question.format()
 
     return jsonify(
     {
@@ -295,15 +234,7 @@ def create_app(test_config=None):
           405,
       )
   return app
-"""  
-cd backend 
-source venv/scripts/activate
-export FLASK_APP=flaskr
-export FLASK_DEBUG=true
-flask run
 
-curl http://localhost:5000/questions
-"""
 
   
 

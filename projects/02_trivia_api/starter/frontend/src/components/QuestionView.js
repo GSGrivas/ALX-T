@@ -23,7 +23,7 @@ class QuestionView extends Component {
 
   getQuestions = () => {
     $.ajax({
-      url: `/questions?page=${this.state.page}`, //TODO: update request URL
+      url: `/questions?page=${this.state.page}`, 
       type: "GET",
       success: (result) => {
         this.setState({
@@ -59,7 +59,7 @@ class QuestionView extends Component {
 
   getByCategory= (id) => {
     $.ajax({
-      url: `/categories/${id}/questions`, //TODO: update request URL
+      url: `/categories/${id}/questions`, 
       type: "GET",
       success: (result) => {
         this.setState({
@@ -76,7 +76,7 @@ class QuestionView extends Component {
 
   submitSearch = (searchTerm) => {
     $.ajax({
-      url: `/questions/searches`, //TODO: update request URL
+      url: `/questions/searches`, 
       type: "POST",
       dataType: 'json',
       contentType: 'application/json',
@@ -123,7 +123,7 @@ class QuestionView extends Component {
           <ul>
             {/* This was breaking the code, I had to alter it*/}
             {Object.keys(this.state.categories).map((id, ) => (
-              <li key={id.toString()} onClick={() => {this.getByCategory(id)}}>
+              <li key={id} onClick={() => {this.getByCategory(id)}}>
                 <img className="category" src={`${this.state.categories[id].type.toString().toLowerCase()}.svg`}/>
               </li>
             ))}

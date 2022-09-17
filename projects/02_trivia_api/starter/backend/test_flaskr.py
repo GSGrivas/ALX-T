@@ -61,10 +61,6 @@ class TriviaTestCase(unittest.TestCase):
         """Executed after reach test"""
         pass
 
-    """
-    TODO
-    Write at least one test for each test for successful operation and for expected errors.
-    """
     # NOTE: Category tests
     def test_get_categories(self):
         res = self.client().get("/categories")
@@ -74,6 +70,7 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data["success"], True)
         self.assertTrue(data["total_categories"])
         self.assertTrue(len(data["categories"]))
+        
 
     # NOTE: Paginate questions tests
     def test_get_paginated_questions(self):
@@ -94,18 +91,18 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data["message"], "resource not found")
 
     # NOTE: Delete questions tests
-    # def test_delete_question(self):
-    #     res = self.client().delete('/questions/5')
-    #     data = json.loads(res.data)
+    def test_delete_question(self):
+        res = self.client().delete('/questions/5')
+        data = json.loads(res.data)
 
-    #     question = Question.query.filter(Question.id == 5).one_or_none()
+        question = Question.query.filter(Question.id == 5).one_or_none()
 
-    #     self.assertEqual(res.status_code, 200)
-    #     self.assertEqual(data['success'], True)
-    #     self.assertEqual(data['deleted'], 5)
-    #     self.assertTrue(data['total_questions'])
-    #     self.assertTrue(len(data['questions']))
-    #     self.assertEqual(question, None)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(data['success'], True)
+        self.assertEqual(data['deleted'], 5)
+        self.assertTrue(data['total_questions'])
+        self.assertTrue(len(data['questions']))
+        self.assertEqual(question, None)
     
     def test_delete_question_beyond_max(self):
         res = self.client().delete('/questions/1000')
@@ -122,9 +119,16 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data['success'], True)
 
+    def test_error_422_create_new_question(self):
+        res = self.client().post("/questions", json=None)
+        data = json.loads(res.data)
+        
+        self.assertEqual(res.status_code, 422)
+        self.assertEqual(data['success'], False)
+
     # NOTE: Search questions tests
     def test_get_question_search_with_results(self):
-        res = self.client().post("/questions/searches", json={"search": "soccer"})
+        res = self.client().post("/questions/searches", json={"searchTerm": "soccer"})
         data = json.loads(res.data)
 
         self.assertEqual(res.status_code, 200)
@@ -132,7 +136,7 @@ class TriviaTestCase(unittest.TestCase):
         self.assertTrue(data["total_questions"], 1)
 
     def test_get_question_search_without_results(self):
-        res = self.client().post("/questions/searches", json={"search": "johhnys"})
+        res = self.client().post("/questions/searches", json={"searchTerm": "johhnys"})
         data = json.loads(res.data)
 
         self.assertEqual(res.status_code, 404)
@@ -146,7 +150,7 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data["success"], True)
         self.assertTrue(data["questions"])
-        self.assertEqual(data["total_questions"], 3)
+        self.assertEqual(data["total_questions"], 4)
         self.assertTrue(data["current_category"],"Science")
 
     def test_404_get_questions_by_categories(self):
@@ -166,20 +170,13 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data["success"], True)
         self.assertTrue(data["currentQuestion"])
 
-    def test_get_quizzes_with_previous_questions(self):
-        res = self.client().post("/quizzes", json={"previous_questions": self.new_question, "quiz_category": "Science"})
+    def test_get_quizzes_with_all_previous_questions(self):
+        res = self.client().post("/quizzes", json={"previous_questions": self.previous_questions, "quiz_category": "Science"})
         data = json.loads(res.data)
 
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data["success"], True)
-        self.assertTrue(data["currentQuestion"])
-
-    def test_404_get_quizzes_with_all_previous_questions(self):
-        res = self.client().post("/quizzes", json={"previous_questions": self.previous_questions, "quiz_category": "Science"})
-        data = json.loads(res.data)
-
-        self.assertEqual(res.status_code, 404)
-        self.assertEqual(data["success"], False)
+        self.assertEqual(data["currentQuestion"], None)
 
 
 # Make the tests conveniently executable
