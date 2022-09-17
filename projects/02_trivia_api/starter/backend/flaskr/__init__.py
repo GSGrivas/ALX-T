@@ -36,7 +36,7 @@ def create_app(test_config=None):
   app = Flask(__name__)
   setup_db(app)
   CORS(app)
-
+  
   @app.after_request
   def after_request(response):
     response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization,true")
@@ -133,11 +133,10 @@ def create_app(test_config=None):
   def search_question():
     body = request.get_json()
     search = body.get("searchTerm")
-    questions = {
-      Question.query.order_by(Question.id)
-      .filter(Question.question
-      .ilike('%{}%'.format(search))).all()
-    }
+    questions = Question.query\
+    .order_by(Question.id)\
+    .filter(Question.question.ilike('%{}%'.format(search)))\
+    .all()
     formatted_questions = [question.format() for question in questions]
 
     if len(formatted_questions) == 0:
