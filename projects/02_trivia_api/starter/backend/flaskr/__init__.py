@@ -1,6 +1,6 @@
 """  
 cd backend 
-source venv/scripts/activate
+source env/scripts/activate
 export FLASK_APP=flaskr
 export FLASK_DEBUG=true
 flask run
@@ -10,7 +10,7 @@ curl http://localhost:5000/questions
 
 import os
 from unicodedata import category
-from flask import Flask, request, abort, jsonify
+from / import Flask, request, abort, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import random
