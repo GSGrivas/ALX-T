@@ -2,6 +2,7 @@
 cd backend 
 source env/scripts/activate
 export FLASK_APP=api.py
+cd src
 export FLASK_DEBUG=true
 flask run
 https://dev-9-yavzwi.us.auth0.com/authorize?audience=coffee&response_type=token&client_id=pxAViF8eUPZ8VxXfkEvTMXDuX69VKbup&redirect_uri=https://127.0.0.1:8080/login-results
@@ -12,11 +13,11 @@ from flask import request, _request_ctx_stack
 from functools import wraps
 from jose import jwt
 from urllib.request import urlopen
+import os
 
-
-AUTH0_DOMAIN = 'dev-9-yavzwi.us.auth0.com'
-ALGORITHMS = ['RS256']
-API_AUDIENCE = 'coffee'
+AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN', 'dev-9-yavzwi.us.auth0.com')  
+ALGORITHMS = os.getenv('ALGORITHMS', ['RS256'])  
+API_AUDIENCE = os.getenv('API_AUDIENCE', 'coffee') 
 
 ## AuthError Exception
 '''
